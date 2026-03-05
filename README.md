@@ -1,5 +1,49 @@
 # ServeTap
 
+## Getting Started
+
+Use these steps to run the project locally for testing.
+
+1. Clone the repository.
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create your env file from the example and set real values:
+
+```bash
+# macOS/Linux
+cp .env.example .env
+
+# Windows (PowerShell)
+Copy-Item .env.example .env
+```
+
+Required variables:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+4. Start the development server:
+
+```bash
+npm run dev
+```
+
+5. Build for production testing:
+
+```bash
+npm run build
+npm run preview
+```
+
+Notes:
+
+- Commit source files and config files, not `dist/` or `node_modules/`.
+- Never commit `.env` (secrets).
+
 ## QR Table Ordering Flow
 
 The app supports table-aware ordering through a `table` query parameter.
