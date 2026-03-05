@@ -1,0 +1,51 @@
+.home-container {
+  background-image: url("https://images.unsplash.com/photo-1555396273-367ea4eb4db5");
+  background-size: cover;
+  background-position: center;
+  height: 100vh;
+  position: relative;
+}
+
+.overlay {
+  background: rgba(0, 0, 0, 0.55);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  text-align: center;
+}
+
+.title {
+  font-size: 3rem;
+  margin-bottom: 10px;
+  animation: fadeIn 1.5s ease;
+}
+
+.subtitle {
+  font-size: 1.3rem;
+  margin-bottom: 30px;
+  animation: fadeIn 2s ease;
+}
+
+.menu-button {
+  padding: 12px 25px;
+  background: #ffcc00;
+  color: black;
+  font-weight: bold;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 1.2rem;
+  transition: 0.3s;
+}
+
+.menu-button:hover {
+  background: #ffdd33;
+  transform: scale(1.05);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

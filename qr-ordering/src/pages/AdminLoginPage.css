@@ -1,0 +1,60 @@
+.admin-login-container {
+  min-height: 100vh;
+  background-image: url("https://images.unsplash.com/photo-1556742049-0cfed4f6a45d");
+  background-size: cover;
+  background-position: center;
+}
+
+.admin-login-overlay {
+  min-height: 100vh;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.admin-login-card {
+  width: min(380px, 100%);
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 14px;
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.admin-login-card h2,
+.admin-login-card p {
+  margin: 0;
+}
+
+.admin-login-card label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.admin-login-card input {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 0.95rem;
+}
+
+.admin-login-card button {
+  margin-top: 4px;
+  border: none;
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-login-error {
+  color: #b22424;
+  font-weight: 700;
+  margin: 0;
+}

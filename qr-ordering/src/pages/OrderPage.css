@@ -1,0 +1,172 @@
+.order-container {
+  min-height: 100vh;
+  background-image: url("https://images.unsplash.com/photo-1559339352-11d035aa65de");
+  background-size: cover;
+  background-position: center;
+}
+
+.order-overlay {
+  min-height: 100vh;
+  background: rgba(0, 0, 0, 0.56);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.order-card {
+  width: min(680px, 100%);
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.order-card-submitted {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.25);
+}
+
+.order-card h2 {
+  margin: 0 0 6px;
+}
+
+.order-table {
+  margin: 0 0 16px;
+  color: #555;
+}
+
+.order-items {
+  display: grid;
+  gap: 10px;
+}
+
+.order-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #ececec;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.order-item-name,
+.order-item-price {
+  margin: 0;
+}
+
+.order-item-price {
+  color: #4f4f4f;
+}
+
+.order-item-note {
+  margin: 3px 0 0;
+  font-size: 0.88rem;
+  color: #666;
+}
+
+.order-note-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #4a4a4a;
+}
+
+.order-note-select {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.84rem;
+  background: #fff;
+}
+
+.order-remove-button {
+  border: none;
+  border-radius: 8px;
+  background: #f3f3f3;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.order-total {
+  margin: 16px 0;
+}
+
+.order-submit-button {
+  border: none;
+  border-radius: 10px;
+  background: #ffcc00;
+  color: #111;
+  padding: 11px 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.order-success p {
+  margin: 10px 0 14px;
+  font-weight: 700;
+}
+
+.order-success {
+  border: 1px solid #e7f5ea;
+  background: #f6fff8;
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+  animation: orderSuccessReveal 0.45s ease;
+}
+
+.order-success-icon {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #12753a;
+  background: #e4f6e8;
+  font-size: 1.2rem;
+  font-weight: 900;
+  animation: orderSuccessPulse 0.6s ease;
+}
+
+.order-success button {
+  border: none;
+  border-radius: 10px;
+  background: #111;
+  color: #fff;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.order-empty {
+  margin: 8px 0 0;
+}
+
+@keyframes orderSuccessReveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes orderSuccessPulse {
+  0% {
+    transform: scale(0.88);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
