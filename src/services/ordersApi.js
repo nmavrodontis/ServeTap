@@ -1,34 +1,78 @@
 import { supabase } from "../lib/supabaseClient";
 
-export async function createOrder({ tableId, cart, total }) {
-    const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-            table_id: tableId,
-            total,
-            status: "new",
-        })
-        .select("id")
-        .single();
+const CLIENT_SESSION_STORAGE_KEY = "orderClientSessionV1";
 
-    if (orderError) throw orderError;
+function makeRandomId() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
 
-    const itemsPayload = cart.map((item) => ({
-        order_id: order.id,
-        product_id: String(item.id),
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getClientSessionId() {
+    try {
+        const existing = localStorage.getItem(CLIENT_SESSION_STORAGE_KEY);
+        if (existing) {
+            return existing;
+        }
+
+        const created = makeRandomId();
+        localStorage.setItem(CLIENT_SESSION_STORAGE_KEY, created);
+        return created;
+    } catch {
+        return makeRandomId();
+    }
+}
+
+function getClientFingerprint() {
+    const userAgent = typeof navigator !== "undefined" ? navigator.userAgent || "unknown" : "unknown";
+    const sessionId = getClientSessionId();
+    return `${userAgent}::${sessionId}`;
+}
+
+function normalizeCartItems(cart) {
+    return cart.map((item) => ({
+        productId: String(item.id),
         name: item.name,
-        price: item.price,
+        price: Number(item.price),
         qty: 1,
         note: item.note || "",
     }));
+}
 
-    const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(itemsPayload);
+export async function createOrder({ tableId, cart, total, tableToken }) {
+    const payload = {
+        tableId,
+        total: Number(total),
+        items: normalizeCartItems(cart),
+        idempotencyKey: makeRandomId(),
+        fingerprint: getClientFingerprint(),
+    };
 
-    if (itemsError) throw itemsError;
+    if (tableToken) {
+        payload.tableToken = tableToken;
+    }
 
-    return order.id;
+    const { data, error } = await supabase.functions.invoke("submit-order", {
+        body: payload,
+    });
+
+    if (error) {
+        throw error;
+    }
+
+    if (!data?.ok) {
+        const functionError = new Error(data?.message || "Αποτυχία αποστολής παραγγελίας.");
+        functionError.code = data?.code || "ORDER_SUBMIT_FAILED";
+        throw functionError;
+    }
+
+    if (!data?.orderId) {
+        throw new Error("Η παραγγελία ολοκληρώθηκε χωρίς αναγνωριστικό.");
+    }
+
+    return data.orderId;
 }
 
 export async function fetchOrders() {

@@ -44,6 +44,28 @@ Notes:
 - Commit source files and config files, not `dist/` or `node_modules/`.
 - Never commit `.env` (secrets).
 
+## Anti-Abuse Guards (Client Side)
+
+To reduce prank/spam orders, the app currently enforces these limits:
+
+- Max total items per order: `25`
+- Max distinct products per order: `15`
+- Max quantity per product: `8`
+- Max order total: `120.00 €`
+- Submit cooldown per table: `60` seconds
+- Max submits per table: `3` orders per `10` minutes
+
+Implementation details:
+
+- Cart validation and submit throttling live in `src/utils/orderGuards.js`.
+- Guards run when adding products and before submit in the order page.
+- Submit throttling is stored in browser `localStorage` per table id.
+
+Important:
+
+- These checks improve UX-level protection, but are not enough on their own.
+- For real protection, duplicate the same rules server-side (Supabase RLS / Edge Functions / DB constraints).
+
 ## QR Table Ordering Flow
 
 The app supports table-aware ordering through a `table` query parameter.

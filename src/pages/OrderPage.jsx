@@ -5,32 +5,58 @@ import BackButton from "../components/BackButton";
 import "./OrderPage.css";
 import { getActiveTableId } from "../utils/tableRouting";
 import { createOrder } from "../services/ordersApi";
+import {
+  canSubmitOrderNow,
+  registerSuccessfulSubmit,
+  validateCartForSubmit,
+} from "../utils/orderGuards";
 
 function OrderPage() {
   const { cart, clearCart, removeFromCart, updateCartItemNote } = useContext(CartContext);
   const navigate = useNavigate();
   const location = useLocation();
   const tableId = getActiveTableId(location.search);
+  const tableToken = new URLSearchParams(location.search).get("tableToken") || "";
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const total = cart.reduce((sum, item) => sum + item.price, 0);
 
   const handleSubmitOrder = async () => {
-  if (cart.length === 0) return;
-  if (!tableId) {
-    window.alert("Δεν εντοπίστηκε τραπέζι. Σκάναρε ξανά το QR.");
-    return;
-  }
+    if (isSubmitting) {
+      return;
+    }
 
-  try {
-    await createOrder({ tableId, cart, total });
-    clearCart();
-    setIsSubmitted(true);
-  } catch (err) {
-    console.error(err);
-    window.alert("Αποτυχία αποστολής παραγγελίας.");
-  }
-};
+    const tableValidation = canSubmitOrderNow(tableId);
+    if (!tableValidation.ok) {
+      window.alert(tableValidation.message);
+      return;
+    }
+
+    const cartValidation = validateCartForSubmit(cart, total);
+    if (!cartValidation.ok) {
+      window.alert(cartValidation.message);
+      return;
+    }
+
+    if (!tableId) {
+      window.alert("Δεν εντοπίστηκε τραπέζι. Σκάναρε ξανά το QR.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await createOrder({ tableId, cart, total, tableToken });
+      registerSuccessfulSubmit(tableId);
+      clearCart();
+      setIsSubmitted(true);
+    } catch (err) {
+      console.error(err);
+      window.alert(err?.message || "Αποτυχία αποστολής παραγγελίας.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="order-container">
@@ -95,8 +121,12 @@ function OrderPage() {
           )}
 
           {!isSubmitted && cart.length > 0 && (
-            <button className="order-submit-button" onClick={handleSubmitOrder}>
-              Υποβολή Παραγγελίας στο Bar
+            <button
+              className="order-submit-button"
+              onClick={handleSubmitOrder}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Αποστολή..." : "Υποβολή Παραγγελίας στο Bar"}
             </button>
           )}
         </div>

@@ -75,7 +75,12 @@ function MenuPage() {
                       −
                     </button>
                     <span className="menu-stepper-value">{quantityInCart}</span>
-                    <button className="menu-stepper-btn" onClick={() => addToCart(item, selectedNote)}>
+                    <button
+                      className="menu-stepper-btn"
+                      onClick={() => {
+                        addToCart(item, selectedNote);
+                      }}
+                    >
                       +
                     </button>
                   </div>

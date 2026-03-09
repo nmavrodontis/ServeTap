@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CartContext } from "./CartContextObject";
+import { validateCartForAdd } from "../utils/orderGuards";
 
 export { CartContext } from "./CartContextObject";
 
@@ -7,6 +8,12 @@ export function CartProvider({ children }) {
   const [cart, setCart] = useState([]);
 
   const addToCart = (product, note = "") => {
+    const validation = validateCartForAdd(cart, product);
+    if (!validation.ok) {
+      window.alert(validation.message);
+      return false;
+    }
+
     const cartItem = {
       ...product,
       note,
@@ -14,6 +21,7 @@ export function CartProvider({ children }) {
     };
 
     setCart((prev) => [...prev, cartItem]);
+    return true;
   };
 
   const removeFromCart = (indexToRemove) => {
