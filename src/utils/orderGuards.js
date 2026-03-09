@@ -5,25 +5,14 @@ export const ORDER_LIMITS = {
     maxDistinctProducts: 15,
     maxPerProduct: 8,
     maxOrderTotal: 120,
-    submitCooldownSeconds: 60,
-    maxSubmitsPerWindow: 3,
-    submitWindowMinutes: 10,
+    submitCooldownSeconds: 1,
+    maxSubmitsPerWindow: 1,
+    submitWindowSeconds: 1,
 };
 
 function toSafePrice(value) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function getProductCounts(cart) {
-    const counts = new Map();
-
-    cart.forEach((item) => {
-        const key = String(item.id);
-        counts.set(key, (counts.get(key) || 0) + 1);
-    });
-
-    return counts;
 }
 
 export function validateCartForAdd(cart, product) {
@@ -54,8 +43,8 @@ export function validateCartForAdd(cart, product) {
         };
     }
 
-    const productCounts = getProductCounts(cartList);
-    if ((productCounts.get(productId) || 0) >= ORDER_LIMITS.maxPerProduct) {
+    const currentProductCount = cartList.filter((item) => String(item.id) === productId).length;
+    if (currentProductCount >= ORDER_LIMITS.maxPerProduct) {
         return {
             ok: false,
             message: `Μέχρι ${ORDER_LIMITS.maxPerProduct} τεμάχια από το ίδιο προϊόν.`,
@@ -95,7 +84,12 @@ export function validateCartForSubmit(cart, total) {
         };
     }
 
-    const productCounts = getProductCounts(cartList);
+    const productCounts = new Map();
+    cartList.forEach((item) => {
+        const key = String(item.id);
+        productCounts.set(key, (productCounts.get(key) || 0) + 1);
+    });
+
     for (const count of productCounts.values()) {
         if (count > ORDER_LIMITS.maxPerProduct) {
             return {
@@ -138,7 +132,7 @@ function saveSubmitGuardStore(store) {
 }
 
 function normalizeTimestamps(timestamps, now) {
-    const windowMs = ORDER_LIMITS.submitWindowMinutes * 60 * 1000;
+    const windowMs = ORDER_LIMITS.submitWindowSeconds * 1000;
     return (Array.isArray(timestamps) ? timestamps : []).filter(
         (value) => Number.isFinite(value) && now - value <= windowMs
     );
@@ -166,12 +160,9 @@ export function canSubmitOrderNow(tableId) {
     }
 
     if (timestamps.length >= ORDER_LIMITS.maxSubmitsPerWindow) {
-        const oldestTimestamp = timestamps[0];
-        const retryAfterMs = ORDER_LIMITS.submitWindowMinutes * 60 * 1000 - (now - oldestTimestamp);
-        const retryAfterMinutes = Math.max(1, Math.ceil(retryAfterMs / 60000));
         return {
             ok: false,
-            message: `Πολλές παραγγελίες σε λίγο χρόνο. Δοκίμασε ξανά σε ${retryAfterMinutes} λεπτό(ά).`,
+            message: "Πολλές παραγγελίες σε λίγο χρόνο. Δοκίμασε ξανά σε 1 δευτ.",
         };
     }
 

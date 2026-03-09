@@ -5,9 +5,9 @@ const ORDER_LIMITS = {
   maxDistinctProducts: 15,
   maxPerProduct: 8,
   maxOrderTotal: 120,
-  submitCooldownSeconds: 60,
-  maxSubmitsPerWindow: 3,
-  submitWindowMinutes: 10,
+  submitCooldownSeconds: 1,
+  maxSubmitsPerWindow: 1,
+  submitWindowSeconds: 1,
 };
 
 const corsHeaders = {
@@ -106,6 +106,7 @@ function validatePayload(payload: SubmitOrderPayload) {
   }
 
   computedTotal = Number(computedTotal.toFixed(2));
+
   if (computedTotal > ORDER_LIMITS.maxOrderTotal) {
     return {
       ok: false,
@@ -136,10 +137,9 @@ async function checkRateLimit(admin: ReturnType<typeof createClient>, payload: S
 
   const nowMs = Date.now();
   const cooldownMs = ORDER_LIMITS.submitCooldownSeconds * 1000;
-  const windowMs = ORDER_LIMITS.submitWindowMinutes * 60 * 1000;
+  const windowMs = ORDER_LIMITS.submitWindowSeconds * 1000;
   const windowIso = new Date(nowMs - windowMs).toISOString();
 
-  // Best-effort server-side throttling. If table/schema is missing, skip without breaking orders.
   const { data, error } = await admin
     .from("order_attempts")
     .select("created_at")
@@ -157,29 +157,21 @@ async function checkRateLimit(admin: ReturnType<typeof createClient>, payload: S
   const latest = attempts[0]?.created_at ? Date.parse(attempts[0].created_at) : 0;
 
   if (latest && Number.isFinite(latest) && nowMs - latest < cooldownMs) {
-    const remainingSeconds = Math.ceil((cooldownMs - (nowMs - latest)) / 1000);
     return {
       ok: false,
       code: "SUBMIT_COOLDOWN",
-      message: `Περίμενε ${remainingSeconds} δευτ. πριν ξαναστείλεις παραγγελία.`,
+      message: "Περίμενε 1 δευτ. πριν ξαναστείλεις παραγγελία.",
     };
   }
 
   if (attempts.length >= ORDER_LIMITS.maxSubmitsPerWindow) {
-    const oldestTs = attempts[attempts.length - 1]?.created_at
-      ? Date.parse(attempts[attempts.length - 1].created_at)
-      : 0;
-    const retryAfterMs = oldestTs > 0 ? Math.max(0, windowMs - (nowMs - oldestTs)) : windowMs;
-    const retryAfterMinutes = Math.max(1, Math.ceil(retryAfterMs / 60000));
-
     return {
       ok: false,
       code: "SUBMIT_WINDOW_LIMIT",
-      message: `Πολλές παραγγελίες σε λίγο χρόνο. Δοκίμασε ξανά σε ${retryAfterMinutes} λεπτό(ά).`,
+      message: "Πολλές παραγγελίες σε λίγο χρόνο. Δοκίμασε ξανά σε 1 δευτ.",
     };
   }
 
-  // Best-effort logging. If schema is different, do not block order creation.
   const { error: writeError } = await admin.from("order_attempts").insert({
     table_id: tableId,
     fingerprint: fingerprint || null,
