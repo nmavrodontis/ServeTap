@@ -10,6 +10,11 @@ import {
   registerSuccessfulSubmit,
   validateCartForSubmit,
 } from "../utils/orderGuards";
+import {
+  canUsePlatformVerification,
+  generateVerificationCode,
+  verifyWithBiometrics,
+} from "../utils/phoneVerification";
 
 function OrderPage() {
   const { cart, clearCart, removeFromCart, updateCartItemNote } = useContext(CartContext);
@@ -21,6 +26,35 @@ function OrderPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const total = cart.reduce((sum, item) => sum + item.price, 0);
+
+  const verifyPhysicalPresence = async () => {
+    const canUseBiometrics = await canUsePlatformVerification();
+
+    if (canUseBiometrics) {
+      try {
+        await verifyWithBiometrics();
+        return true;
+      } catch {
+        // Fall back to code verification if biometrics are not available or user cancels.
+      }
+    }
+
+    const code = generateVerificationCode();
+    const typed = window.prompt(
+      `Επιβεβαίωση συσκευής. Πληκτρολόγησε τον κωδικό: ${code}`
+    );
+
+    if (!typed) {
+      return false;
+    }
+
+    if (typed.trim() !== code) {
+      window.alert("Λάθος κωδικός επιβεβαίωσης.");
+      return false;
+    }
+
+    return true;
+  };
 
   const handleSubmitOrder = async () => {
     if (isSubmitting) {
@@ -41,6 +75,12 @@ function OrderPage() {
 
     if (!tableId) {
       window.alert("Δεν εντοπίστηκε τραπέζι. Σκάναρε ξανά το QR.");
+      return;
+    }
+
+    const isVerified = await verifyPhysicalPresence();
+    if (!isVerified) {
+      window.alert("Η επιβεβαίωση συσκευής ακυρώθηκε.");
       return;
     }
 
