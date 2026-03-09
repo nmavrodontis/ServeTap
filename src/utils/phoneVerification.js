@@ -42,26 +42,56 @@ function setStoredPasskeyId(passkeyId) {
 
 export async function canUsePlatformVerification() {
     if (typeof window === "undefined") {
-        return { ok: false, reason: "no-window" };
+        return { ok: false, reason: "no-window", details: "No browser window context." };
     }
 
     if (!window.isSecureContext) {
-        return { ok: false, reason: "insecure-context" };
+        return {
+            ok: false,
+            reason: "insecure-context",
+            details: "Biometrics require HTTPS (or localhost).",
+        };
     }
 
     if (!window.PublicKeyCredential || !navigator.credentials) {
-        return { ok: false, reason: "no-webauthn" };
+        return {
+            ok: false,
+            reason: "no-webauthn",
+            details: "This browser does not expose WebAuthn APIs.",
+        };
     }
 
     if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== "function") {
-        return { ok: false, reason: "no-platform-authenticator" };
+        return {
+            ok: false,
+            reason: "no-platform-authenticator",
+            details: "No platform authenticator API found.",
+        };
+    }
+
+    if (window.top !== window.self) {
+        return {
+            ok: false,
+            reason: "embedded-context",
+            details: "Biometrics may be blocked inside embedded/in-app browsers.",
+        };
     }
 
     try {
         const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-        return available ? { ok: true } : { ok: false, reason: "platform-unavailable" };
+        return available
+            ? { ok: true, reason: "ok", details: "Platform authenticator available." }
+            : {
+                ok: false,
+                reason: "platform-unavailable",
+                details: "No Face ID/Touch ID/passcode authenticator available on this device/browser.",
+            };
     } catch {
-        return { ok: false, reason: "platform-check-failed" };
+        return {
+            ok: false,
+            reason: "platform-check-failed",
+            details: "Platform authenticator check failed.",
+        };
     }
 }
 
@@ -135,6 +165,10 @@ export function getVerificationFallbackMessage(reason) {
 
     if (reason === "no-webauthn" || reason === "no-platform-authenticator") {
         return "This phone/browser does not support passkeys. Using code verification.";
+    }
+
+    if (reason === "embedded-context") {
+        return "This page is opened inside an embedded browser. Open the link in Safari/Chrome to use biometrics.";
     }
 
     return "Biometric verification is not available. Using code verification.";

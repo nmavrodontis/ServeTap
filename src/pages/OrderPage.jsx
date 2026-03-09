@@ -36,10 +36,11 @@ function OrderPage() {
         await verifyWithBiometrics();
         return true;
       } catch {
-        // Fall back to code verification if biometrics are not available or user cancels.
+        window.alert("Biometric step failed or was canceled. Using code verification.");
       }
     } else {
-      window.alert(getVerificationFallbackMessage(biometricAvailability.reason));
+      const detail = biometricAvailability.details ? `\n\nDetails: ${biometricAvailability.details}` : "";
+      window.alert(`${getVerificationFallbackMessage(biometricAvailability.reason)}${detail}`);
     }
 
     const code = generateVerificationCode();
