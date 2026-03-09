@@ -41,6 +41,54 @@ function normalizeCartItems(cart) {
     }));
 }
 
+function toMessage(error) {
+    return String(error?.message || "").toLowerCase();
+}
+
+function isEdgeFunctionUnavailable(error) {
+    const message = toMessage(error);
+    return (
+        error?.status === 404 ||
+        message.includes("failed to send a request to the edge function") ||
+        message.includes("edge function returned a non-2xx")
+    );
+}
+
+async function createOrderDirectly(payload) {
+    const { data: orderRow, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+            table_id: String(payload.tableId),
+            total: Number(payload.total),
+            status: "new",
+        })
+        .select("id")
+        .single();
+
+    if (orderError || !orderRow?.id) {
+        throw orderError || new Error("Αποτυχία δημιουργίας παραγγελίας.");
+    }
+
+    const orderId = orderRow.id;
+    const orderItems = (payload.items || []).map((item) => ({
+        order_id: orderId,
+        product_id: String(item.productId || ""),
+        name: item.name,
+        price: Number(item.price),
+        qty: Number(item.qty) || 1,
+        note: item.note || "",
+    }));
+
+    const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+    if (itemsError) {
+        // Keep tables consistent if items insert fails after order creation.
+        await supabase.from("orders").delete().eq("id", orderId);
+        throw itemsError;
+    }
+
+    return orderId;
+}
+
 export async function createOrder({ tableId, cart, total, tableToken }) {
     const payload = {
         tableId,
@@ -58,8 +106,16 @@ export async function createOrder({ tableId, cart, total, tableToken }) {
         body: payload,
     });
 
+    if (!error && data?.ok && data?.orderId) {
+        return data.orderId;
+    }
+
+    if (isEdgeFunctionUnavailable(error)) {
+        return createOrderDirectly(payload);
+    }
+
     if (error) {
-        throw error;
+        throw new Error(error.message || "Αποτυχία αποστολής παραγγελίας.");
     }
 
     if (!data?.ok) {
@@ -68,11 +124,7 @@ export async function createOrder({ tableId, cart, total, tableToken }) {
         throw functionError;
     }
 
-    if (!data?.orderId) {
-        throw new Error("Η παραγγελία ολοκληρώθηκε χωρίς αναγνωριστικό.");
-    }
-
-    return data.orderId;
+    throw new Error("Η παραγγελία ολοκληρώθηκε χωρίς αναγνωριστικό.");
 }
 
 export async function fetchOrders() {
