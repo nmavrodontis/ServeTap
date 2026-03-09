@@ -148,6 +148,79 @@
   margin: 8px 0 0;
 }
 
+.verification-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.verification-modal {
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+}
+
+.verification-modal h3 {
+  margin: 0 0 8px;
+}
+
+.verification-modal p {
+  margin: 0;
+  color: #3f3f3f;
+}
+
+.verification-code {
+  margin-top: 12px;
+  margin-bottom: 12px;
+  font-size: 1.5rem;
+  letter-spacing: 0.3rem;
+  font-weight: 900;
+  text-align: center;
+  background: #f7f7f7;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.verification-input {
+  width: 100%;
+  border: 1px solid #d7d7d7;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 1rem;
+}
+
+.verification-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.verification-actions button {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.verification-cancel {
+  background: #efefef;
+  color: #222;
+}
+
+.verification-confirm {
+  background: #111;
+  color: #fff;
+}
+
 @keyframes orderSuccessReveal {
   from {
     opacity: 0;

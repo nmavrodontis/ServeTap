@@ -11,10 +11,7 @@ import {
   validateCartForSubmit,
 } from "../utils/orderGuards";
 import {
-  canUsePlatformVerification,
-  getVerificationFallbackMessage,
   generateVerificationCode,
-  verifyWithBiometrics,
 } from "../utils/phoneVerification";
 
 function OrderPage() {
@@ -25,38 +22,51 @@ function OrderPage() {
   const tableToken = new URLSearchParams(location.search).get("tableToken") || "";
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerificationOpen, setIsVerificationOpen] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationInput, setVerificationInput] = useState("");
 
   const total = cart.reduce((sum, item) => sum + item.price, 0);
 
-  const verifyPhysicalPresence = async () => {
-    const biometricAvailability = await canUsePlatformVerification();
-
-    if (biometricAvailability.ok) {
-      try {
-        await verifyWithBiometrics();
-      } catch {
-        window.alert("Biometric step failed or was canceled. Using code verification.");
-      }
-    } else {
-      const detail = biometricAvailability.details ? `\n\nDetails: ${biometricAvailability.details}` : "";
-      window.alert(`${getVerificationFallbackMessage(biometricAvailability.reason)}${detail}`);
-    }
-
+  const openVerification = () => {
     const code = generateVerificationCode();
-    const typed = window.prompt(
-      `Τελική επιβεβαίωση πριν την αποστολή. Πληκτρολόγησε τον κωδικό: ${code}`
-    );
+    setVerificationCode(code);
+    setVerificationInput("");
+    setIsVerificationOpen(true);
+  };
 
-    if (!typed) {
+  const closeVerification = () => {
+    setIsVerificationOpen(false);
+    setVerificationInput("");
+    setVerificationCode("");
+  };
+
+  const verifyCodeInput = () => {
+    if (!verificationInput.trim()) {
       return false;
     }
 
-    if (typed.trim() !== code) {
+    if (verificationInput.trim() !== verificationCode) {
       window.alert("Λάθος κωδικός επιβεβαίωσης.");
       return false;
     }
 
     return true;
+  };
+
+  const submitOrder = async () => {
+    try {
+      setIsSubmitting(true);
+      await createOrder({ tableId, cart, total, tableToken });
+      registerSuccessfulSubmit(tableId);
+      clearCart();
+      setIsSubmitted(true);
+    } catch (err) {
+      console.error(err);
+      window.alert(err?.message || "Αποτυχία αποστολής παραγγελίας.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmitOrder = async () => {
@@ -81,24 +91,16 @@ function OrderPage() {
       return;
     }
 
-    const isVerified = await verifyPhysicalPresence();
-    if (!isVerified) {
-      window.alert("Η επιβεβαίωση συσκευής ακυρώθηκε.");
+    openVerification();
+  };
+
+  const handleConfirmVerification = async () => {
+    if (!verifyCodeInput()) {
       return;
     }
 
-    try {
-      setIsSubmitting(true);
-      await createOrder({ tableId, cart, total, tableToken });
-      registerSuccessfulSubmit(tableId);
-      clearCart();
-      setIsSubmitted(true);
-    } catch (err) {
-      console.error(err);
-      window.alert(err?.message || "Αποτυχία αποστολής παραγγελίας.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    closeVerification();
+    await submitOrder();
   };
 
   return (
@@ -174,6 +176,45 @@ function OrderPage() {
           )}
         </div>
       </div>
+
+      {isVerificationOpen && (
+        <div className="verification-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="verification-modal">
+            <h3>Επιβεβαίωση Παραγγελίας</h3>
+            <p>Για επιβεβαίωση, πληκτρολόγησε τον παρακάτω κωδικό:</p>
+            <div className="verification-code">{verificationCode}</div>
+
+            <input
+              className="verification-input"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              autoFocus
+              placeholder="Πληκτρολόγησε τον κωδικό"
+              value={verificationInput}
+              onChange={(event) => setVerificationInput(event.target.value.replace(/\D/g, ""))}
+            />
+
+            <div className="verification-actions">
+              <button
+                type="button"
+                className="verification-cancel"
+                onClick={closeVerification}
+              >
+                Ακύρωση
+              </button>
+              <button
+                type="button"
+                className="verification-confirm"
+                onClick={handleConfirmVerification}
+              >
+                Επιβεβαίωση
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
