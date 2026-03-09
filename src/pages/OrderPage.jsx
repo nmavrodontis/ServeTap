@@ -34,7 +34,6 @@ function OrderPage() {
     if (biometricAvailability.ok) {
       try {
         await verifyWithBiometrics();
-        return true;
       } catch {
         window.alert("Biometric step failed or was canceled. Using code verification.");
       }
@@ -45,7 +44,7 @@ function OrderPage() {
 
     const code = generateVerificationCode();
     const typed = window.prompt(
-      `Επιβεβαίωση συσκευής. Πληκτρολόγησε τον κωδικό: ${code}`
+      `Τελική επιβεβαίωση πριν την αποστολή. Πληκτρολόγησε τον κωδικό: ${code}`
     );
 
     if (!typed) {
