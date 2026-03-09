@@ -5,6 +5,9 @@ const ORDER_LIMITS = {
   maxDistinctProducts: 15,
   maxPerProduct: 8,
   maxOrderTotal: 120,
+  submitCooldownSeconds: 60,
+  maxSubmitsPerWindow: 3,
+  submitWindowMinutes: 10,
 };
 
 const corsHeaders = {
@@ -123,6 +126,72 @@ function validatePayload(payload: SubmitOrderPayload) {
   return { ok: true, tableId, items, computedTotal };
 }
 
+async function checkRateLimit(admin: ReturnType<typeof createClient>, payload: SubmitOrderPayload) {
+  const tableId = String(payload?.tableId || "").trim();
+  const fingerprint = String(payload?.fingerprint || "").trim();
+
+  if (!tableId) {
+    return { ok: false, code: "TABLE_REQUIRED", message: "Δεν εντοπίστηκε τραπέζι." };
+  }
+
+  const nowMs = Date.now();
+  const cooldownMs = ORDER_LIMITS.submitCooldownSeconds * 1000;
+  const windowMs = ORDER_LIMITS.submitWindowMinutes * 60 * 1000;
+  const windowIso = new Date(nowMs - windowMs).toISOString();
+
+  // Best-effort server-side throttling. If table/schema is missing, skip without breaking orders.
+  const { data, error } = await admin
+    .from("order_attempts")
+    .select("created_at")
+    .eq("table_id", tableId)
+    .gte("created_at", windowIso)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error("order_attempts read skipped:", error.message);
+    return { ok: true };
+  }
+
+  const attempts = Array.isArray(data) ? data : [];
+  const latest = attempts[0]?.created_at ? Date.parse(attempts[0].created_at) : 0;
+
+  if (latest && Number.isFinite(latest) && nowMs - latest < cooldownMs) {
+    const remainingSeconds = Math.ceil((cooldownMs - (nowMs - latest)) / 1000);
+    return {
+      ok: false,
+      code: "SUBMIT_COOLDOWN",
+      message: `Περίμενε ${remainingSeconds} δευτ. πριν ξαναστείλεις παραγγελία.`,
+    };
+  }
+
+  if (attempts.length >= ORDER_LIMITS.maxSubmitsPerWindow) {
+    const oldestTs = attempts[attempts.length - 1]?.created_at
+      ? Date.parse(attempts[attempts.length - 1].created_at)
+      : 0;
+    const retryAfterMs = oldestTs > 0 ? Math.max(0, windowMs - (nowMs - oldestTs)) : windowMs;
+    const retryAfterMinutes = Math.max(1, Math.ceil(retryAfterMs / 60000));
+
+    return {
+      ok: false,
+      code: "SUBMIT_WINDOW_LIMIT",
+      message: `Πολλές παραγγελίες σε λίγο χρόνο. Δοκίμασε ξανά σε ${retryAfterMinutes} λεπτό(ά).`,
+    };
+  }
+
+  // Best-effort logging. If schema is different, do not block order creation.
+  const { error: writeError } = await admin.from("order_attempts").insert({
+    table_id: tableId,
+    fingerprint: fingerprint || null,
+  });
+
+  if (writeError) {
+    console.error("order_attempts write skipped:", writeError.message);
+  }
+
+  return { ok: true };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -158,6 +227,11 @@ Deno.serve(async (req) => {
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
   });
+
+  const rateLimit = await checkRateLimit(admin, payload);
+  if (!rateLimit.ok) {
+    return respond(429, rateLimit);
+  }
 
   const { data: orderRow, error: orderError } = await admin
     .from("orders")
