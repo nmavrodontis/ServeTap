@@ -12,6 +12,7 @@ import {
 } from "../utils/orderGuards";
 import {
   canUsePlatformVerification,
+  getVerificationFallbackMessage,
   generateVerificationCode,
   verifyWithBiometrics,
 } from "../utils/phoneVerification";
@@ -28,15 +29,17 @@ function OrderPage() {
   const total = cart.reduce((sum, item) => sum + item.price, 0);
 
   const verifyPhysicalPresence = async () => {
-    const canUseBiometrics = await canUsePlatformVerification();
+    const biometricAvailability = await canUsePlatformVerification();
 
-    if (canUseBiometrics) {
+    if (biometricAvailability.ok) {
       try {
         await verifyWithBiometrics();
         return true;
       } catch {
         // Fall back to code verification if biometrics are not available or user cancels.
       }
+    } else {
+      window.alert(getVerificationFallbackMessage(biometricAvailability.reason));
     }
 
     const code = generateVerificationCode();
