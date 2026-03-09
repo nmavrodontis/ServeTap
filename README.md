@@ -52,8 +52,8 @@ To reduce prank/spam orders, the app currently enforces these limits:
 - Max distinct products per order: `15`
 - Max quantity per product: `8`
 - Max order total: `120.00 €`
-- Submit cooldown per table: `60` seconds
-- Max submits per table: `3` orders per `10` minutes
+- Submit cooldown per table: `1` second
+- Max submits per table: `1` order per `1` second window
 
 Implementation details:
 
@@ -65,6 +65,35 @@ Important:
 
 - These checks improve UX-level protection, but are not enough on their own.
 - For real protection, duplicate the same rules server-side (Supabase RLS / Edge Functions / DB constraints).
+
+## Waiter Call Feature Setup
+
+The customer order page includes two new actions:
+
+- `Κλήση Σερβιτόρου` (questions/help)
+- `Κλήση για Πληρωμή`
+
+Backend setup required once per Supabase project:
+
+1. Run SQL script in Supabase SQL Editor:
+
+```sql
+-- file: supabase/sql/create_waiter_calls.sql
+```
+
+2. Deploy the waiter-call edge function:
+
+```bash
+npx supabase functions deploy call-waiter --project-ref <your-project-ref> --no-verify-jwt
+```
+
+Optional (if you changed order function locally):
+
+```bash
+npx supabase functions deploy submit-order --project-ref <your-project-ref> --no-verify-jwt
+```
+
+Staff can monitor and resolve pending waiter calls from `Kitchen Dashboard` (`/kitchen`).
 
 ## QR Table Ordering Flow
 

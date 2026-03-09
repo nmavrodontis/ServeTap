@@ -107,6 +107,70 @@
   cursor: pointer;
 }
 
+.waiter-help-card {
+  margin-top: 14px;
+  border: 1px solid #f0dfb0;
+  border-radius: 12px;
+  padding: 14px;
+  background: linear-gradient(135deg, #fffaf0, #fff4d6);
+}
+
+.waiter-help-card h3 {
+  margin: 0 0 6px;
+}
+
+.waiter-help-card p {
+  margin: 0;
+  color: #3f3f3f;
+}
+
+.waiter-note-input {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #decfa6;
+  border-radius: 10px;
+  min-height: 74px;
+  resize: vertical;
+  padding: 10px;
+  font: inherit;
+  background: #fff;
+}
+
+.waiter-actions {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.waiter-button {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.waiter-button:disabled {
+  opacity: 0.66;
+  cursor: not-allowed;
+}
+
+.waiter-button-assistance {
+  background: linear-gradient(135deg, #2b8a3e, #17612a);
+}
+
+.waiter-button-payment {
+  background: linear-gradient(135deg, #2d6cdf, #1e4fa6);
+}
+
+.waiter-feedback {
+  margin-top: 8px !important;
+  color: #0b662b !important;
+  font-weight: 700;
+}
+
 .order-success p {
   margin: 10px 0 14px;
   font-weight: 700;
@@ -241,5 +305,11 @@
   }
   100% {
     transform: scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .waiter-actions {
+    grid-template-columns: 1fr;
   }
 }

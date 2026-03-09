@@ -149,3 +149,96 @@ export async function fetchOrders() {
     if (error) throw error;
     return data;
 }
+
+function normalizeWaiterRequestType(value) {
+    const type = String(value || "").trim().toLowerCase();
+    if (type === "payment") {
+        return "payment";
+    }
+
+    return "assistance";
+}
+
+export async function requestWaiter({ tableId, requestType, note, tableToken }) {
+    const payload = {
+        tableId: String(tableId || "").trim(),
+        requestType: normalizeWaiterRequestType(requestType),
+        note: String(note || "").trim(),
+        idempotencyKey: makeRandomId(),
+        fingerprint: getClientFingerprint(),
+    };
+
+    if (tableToken) {
+        payload.tableToken = tableToken;
+    }
+
+    const { data, error } = await supabase.functions.invoke("call-waiter", {
+        body: payload,
+    });
+
+    if (!error && data?.ok && data?.callId) {
+        return data.callId;
+    }
+
+    if (isEdgeFunctionUnavailable(error)) {
+        const { data: callRow, error: insertError } = await supabase
+            .from("waiter_calls")
+            .insert({
+                table_id: payload.tableId,
+                request_type: payload.requestType,
+                note: payload.note || "",
+                status: "pending",
+                fingerprint: payload.fingerprint,
+            })
+            .select("id")
+            .single();
+
+        if (insertError || !callRow?.id) {
+            throw new Error(insertError?.message || "Αποτυχία κλήσης σερβιτόρου.");
+        }
+
+        return callRow.id;
+    }
+
+    if (error) {
+        throw new Error(error.message || "Αποτυχία κλήσης σερβιτόρου.");
+    }
+
+    if (!data?.ok) {
+        const functionError = new Error(data?.message || "Αποτυχία κλήσης σερβιτόρου.");
+        functionError.code = data?.code || "WAITER_CALL_FAILED";
+        throw functionError;
+    }
+
+    throw new Error("Η κλήση σερβιτόρου ολοκληρώθηκε χωρίς αναγνωριστικό.");
+}
+
+export async function fetchWaiterCalls() {
+    const { data, error } = await supabase
+        .from("waiter_calls")
+        .select("id, table_id, request_type, note, status, created_at")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        throw error;
+    }
+
+    return Array.isArray(data) ? data : [];
+}
+
+export async function markWaiterCallHandled(callId) {
+    const normalizedId = Number(callId);
+    if (!Number.isFinite(normalizedId)) {
+        throw new Error("Μη έγκυρο αναγνωριστικό κλήσης.");
+    }
+
+    const { error } = await supabase
+        .from("waiter_calls")
+        .update({ status: "handled", handled_at: new Date().toISOString() })
+        .eq("id", normalizedId);
+
+    if (error) {
+        throw error;
+    }
+}

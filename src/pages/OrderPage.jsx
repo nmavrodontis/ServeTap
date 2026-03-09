@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import BackButton from "../components/BackButton";
 import "./OrderPage.css";
 import { getActiveTableId } from "../utils/tableRouting";
-import { createOrder } from "../services/ordersApi";
+import { createOrder, requestWaiter } from "../services/ordersApi";
 import {
   canSubmitOrderNow,
   registerSuccessfulSubmit,
@@ -25,6 +25,9 @@ function OrderPage() {
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationInput, setVerificationInput] = useState("");
+  const [isCallingWaiter, setIsCallingWaiter] = useState(false);
+  const [waiterNote, setWaiterNote] = useState("");
+  const [waiterFeedback, setWaiterFeedback] = useState("");
 
   const total = cart.reduce((sum, item) => sum + item.price, 0);
 
@@ -103,6 +106,39 @@ function OrderPage() {
     await submitOrder();
   };
 
+  const handleRequestWaiter = async (requestType) => {
+    if (isCallingWaiter) {
+      return;
+    }
+
+    if (!tableId) {
+      window.alert("Δεν εντοπίστηκε τραπέζι. Σκάναρε ξανά το QR.");
+      return;
+    }
+
+    try {
+      setIsCallingWaiter(true);
+      await requestWaiter({
+        tableId,
+        requestType,
+        note: waiterNote,
+        tableToken,
+      });
+
+      setWaiterNote("");
+      setWaiterFeedback(
+        requestType === "payment"
+          ? "Ο σερβιτόρος ειδοποιήθηκε για πληρωμή και έρχεται στο τραπέζι σου."
+          : "Ο σερβιτόρος ειδοποιήθηκε και έρχεται στο τραπέζι σου."
+      );
+    } catch (err) {
+      console.error(err);
+      window.alert(err?.message || "Αποτυχία κλήσης σερβιτόρου.");
+    } finally {
+      setIsCallingWaiter(false);
+    }
+  };
+
   return (
     <div className="order-container">
       <BackButton />
@@ -173,6 +209,44 @@ function OrderPage() {
             >
               {isSubmitting ? "Αποστολή..." : "Υποβολή Παραγγελίας στο Bar"}
             </button>
+          )}
+
+          {!isSubmitted && (
+            <section className="waiter-help-card">
+              <h3>Χρειάζεσαι σερβιτόρο;</h3>
+              <p>
+                Κάλεσε σερβιτόρο για ερώτηση ή για πληρωμή και θα έρθει στο τραπέζι σου.
+              </p>
+
+              <textarea
+                className="waiter-note-input"
+                value={waiterNote}
+                onChange={(event) => setWaiterNote(event.target.value.slice(0, 180))}
+                placeholder="Προαιρετική σημείωση (π.χ. θέλω λογαριασμό / έχω ερώτηση)"
+              />
+
+              <div className="waiter-actions">
+                <button
+                  type="button"
+                  className="waiter-button waiter-button-assistance"
+                  onClick={() => handleRequestWaiter("assistance")}
+                  disabled={isCallingWaiter}
+                >
+                  {isCallingWaiter ? "Αποστολή..." : "Κλήση Σερβιτόρου"}
+                </button>
+
+                <button
+                  type="button"
+                  className="waiter-button waiter-button-payment"
+                  onClick={() => handleRequestWaiter("payment")}
+                  disabled={isCallingWaiter}
+                >
+                  {isCallingWaiter ? "Αποστολή..." : "Κλήση για Πληρωμή"}
+                </button>
+              </div>
+
+              {waiterFeedback && <p className="waiter-feedback">{waiterFeedback}</p>}
+            </section>
           )}
         </div>
       </div>
