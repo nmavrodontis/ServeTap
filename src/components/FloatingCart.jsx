@@ -2,13 +2,14 @@ import { useContext, useMemo, useState } from "react";
 import { CartContext } from "../context/CartContextObject";
 import { Link, useLocation } from "react-router-dom";
 import "./FloatingCart.css";
-import { getActiveTableId, withTable } from "../utils/tableRouting";
+import { getActiveTableId, getOrCreateActiveVisitToken, withTable } from "../utils/tableRouting";
 
 function FloatingCart() {
   const { cart, removeFromCart, clearCart } = useContext(CartContext);
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const tableId = getActiveTableId(location.search);
+  const tableToken = getOrCreateActiveVisitToken(location.search, tableId);
 
   const total = useMemo(
     () => cart.reduce((sum, item) => sum + item.price, 0),
@@ -68,7 +69,7 @@ function FloatingCart() {
                 <strong>Σύνολο: {total.toFixed(2)} €</strong>
                 <div className="floating-cart-actions">
                   <Link
-                    to={withTable("/order", tableId)}
+                    to={withTable("/order", tableId, tableToken)}
                     className="floating-cart-checkout"
                     onClick={() => setIsOpen(false)}
                   >

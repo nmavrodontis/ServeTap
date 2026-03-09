@@ -2,12 +2,13 @@ import { useContext } from "react";
 import { CartContext } from "../context/CartContextObject";
 import { Link, useLocation } from "react-router-dom";
 import BackButton from "../components/BackButton";
-import { getActiveTableId, withTable } from "../utils/tableRouting";
+import { getActiveTableId, getOrCreateActiveVisitToken, withTable } from "../utils/tableRouting";
 
 function CartPage() {
   const { cart, clearCart, removeFromCart } = useContext(CartContext);
   const location = useLocation();
   const tableId = getActiveTableId(location.search);
+  const tableToken = getOrCreateActiveVisitToken(location.search, tableId);
 
   const total = cart.reduce((sum, item) => sum + item.price, 0);
 
@@ -48,7 +49,7 @@ function CartPage() {
         <>
           <h3>Σύνολο: {total.toFixed(2)} €</h3>
 
-          <Link to={withTable("/order", tableId)}>
+          <Link to={withTable("/order", tableId, tableToken)}>
             <button style={{ marginRight: 10 }}>Ολοκλήρωση Παραγγελίας</button>
           </Link>
 

@@ -95,6 +95,31 @@ npx supabase functions deploy submit-order --project-ref <your-project-ref> --no
 
 Staff can monitor and resolve pending waiter calls from `Kitchen Dashboard` (`/kitchen`).
 
+## Per-Visit Order History (Table Privacy)
+
+Customers can see only orders from their current table visit.
+
+How it works:
+
+- The app creates a `tableToken` per table visit and stores it locally.
+- Every order is saved with that `visit_token`.
+- History in `/order` is filtered by `table_id + visit_token`.
+- Visit token expires automatically after a few hours, so future customers on the same table do not see old history.
+
+Required DB/Function updates:
+
+1. Run SQL in Supabase SQL Editor:
+
+```sql
+-- file: supabase/sql/add_visit_token_to_orders.sql
+```
+
+2. Deploy updated order function:
+
+```bash
+npx supabase functions deploy submit-order --project-ref <your-project-ref> --no-verify-jwt
+```
+
 ## QR Table Ordering Flow
 
 The app supports table-aware ordering through a `table` query parameter.

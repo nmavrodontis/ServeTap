@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import "./CategoriesPage.css";
 import BackButton from "../components/BackButton";
-import { getActiveTableId, withTable } from "../utils/tableRouting";
+import { getActiveTableId, getOrCreateActiveVisitToken, withTable } from "../utils/tableRouting";
 
 const categories = [
   { id: "coffee", name: "Καφέδες" },
@@ -13,6 +13,7 @@ const categories = [
 function CategoriesPage() {
   const location = useLocation();
   const tableId = getActiveTableId(location.search);
+  const tableToken = getOrCreateActiveVisitToken(location.search, tableId);
 
   return (
     <div className="categories-container">
@@ -24,7 +25,7 @@ function CategoriesPage() {
           {categories.map((cat) => (
             <Link
               key={cat.id}
-              to={withTable(`/menu/${cat.id}`, tableId)}
+              to={withTable(`/menu/${cat.id}`, tableId, tableToken)}
               className="category-card"
             >
               {cat.name}

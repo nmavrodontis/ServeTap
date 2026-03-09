@@ -10,17 +10,14 @@ import FloatingCart from "./components/FloatingCart";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminPanelPage from "./pages/AdminPanelPage";
 import { useAdminAuth } from "./context/useAdminAuth";
-import { getTableIdFromSearch, persistTableId } from "./utils/tableRouting";
+import { syncTableVisitFromSearch } from "./utils/tableRouting";
 
 function AppRoutes() {
   const { isAdminLoggedIn } = useAdminAuth();
   const location = useLocation();
 
   useEffect(() => {
-    const scannedTableId = getTableIdFromSearch(location.search);
-    if (scannedTableId) {
-      persistTableId(scannedTableId);
-    }
+    syncTableVisitFromSearch(location.search);
   }, [location.search]);
 
   return (

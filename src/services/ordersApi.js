@@ -55,15 +55,30 @@ function isEdgeFunctionUnavailable(error) {
 }
 
 async function createOrderDirectly(payload) {
-    const { data: orderRow, error: orderError } = await supabase
+    const baseOrderInsert = {
+        table_id: String(payload.tableId),
+        total: Number(payload.total),
+        status: "new",
+    };
+
+    let orderInsertResult = await supabase
         .from("orders")
         .insert({
-            table_id: String(payload.tableId),
-            total: Number(payload.total),
-            status: "new",
+            ...baseOrderInsert,
+            visit_token: String(payload.tableToken || "").trim() || null,
         })
         .select("id")
         .single();
+
+    if (orderInsertResult?.error?.code === "42703") {
+        orderInsertResult = await supabase
+            .from("orders")
+            .insert(baseOrderInsert)
+            .select("id")
+            .single();
+    }
+
+    const { data: orderRow, error: orderError } = orderInsertResult;
 
     if (orderError || !orderRow?.id) {
         throw orderError || new Error("Αποτυχία δημιουργίας παραγγελίας.");
@@ -241,4 +256,44 @@ export async function markWaiterCallHandled(callId) {
     if (error) {
         throw error;
     }
+}
+
+export async function fetchVisitOrders({ tableId, tableToken }) {
+    const normalizedTableId = String(tableId || "").trim();
+    const normalizedToken = String(tableToken || "").trim();
+
+    if (!normalizedTableId || !normalizedToken) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from("orders")
+        .select(`
+      id,
+      table_id,
+      total,
+      status,
+      created_at,
+      order_items (
+        id,
+        name,
+        price,
+        qty,
+        note
+      )
+    `)
+        .eq("table_id", normalizedTableId)
+        .eq("visit_token", normalizedToken)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+    if (error?.code === "42703") {
+        return [];
+    }
+
+    if (error) {
+        throw error;
+    }
+
+    return Array.isArray(data) ? data : [];
 }

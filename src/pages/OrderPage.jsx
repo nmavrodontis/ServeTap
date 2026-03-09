@@ -1,10 +1,10 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { CartContext } from "../context/CartContextObject";
 import { useLocation, useNavigate } from "react-router-dom";
 import BackButton from "../components/BackButton";
 import "./OrderPage.css";
-import { getActiveTableId } from "../utils/tableRouting";
-import { createOrder, requestWaiter } from "../services/ordersApi";
+import { getActiveTableId, getOrCreateActiveVisitToken } from "../utils/tableRouting";
+import { createOrder, fetchVisitOrders, requestWaiter } from "../services/ordersApi";
 import {
   canSubmitOrderNow,
   registerSuccessfulSubmit,
@@ -19,7 +19,7 @@ function OrderPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const tableId = getActiveTableId(location.search);
-  const tableToken = new URLSearchParams(location.search).get("tableToken") || "";
+  const tableToken = getOrCreateActiveVisitToken(location.search, tableId);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
@@ -28,8 +28,31 @@ function OrderPage() {
   const [isCallingWaiter, setIsCallingWaiter] = useState(false);
   const [waiterNote, setWaiterNote] = useState("");
   const [waiterFeedback, setWaiterFeedback] = useState("");
+  const [visitOrders, setVisitOrders] = useState([]);
+  const [isLoadingVisitOrders, setIsLoadingVisitOrders] = useState(false);
 
   const total = cart.reduce((sum, item) => sum + item.price, 0);
+
+  useEffect(() => {
+    const loadVisitOrders = async () => {
+      if (!tableId || !tableToken) {
+        setVisitOrders([]);
+        return;
+      }
+
+      try {
+        setIsLoadingVisitOrders(true);
+        const data = await fetchVisitOrders({ tableId, tableToken });
+        setVisitOrders(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoadingVisitOrders(false);
+      }
+    };
+
+    loadVisitOrders();
+  }, [tableId, tableToken, isSubmitted]);
 
   const openVerification = () => {
     const code = generateVerificationCode();
@@ -248,6 +271,38 @@ function OrderPage() {
               {waiterFeedback && <p className="waiter-feedback">{waiterFeedback}</p>}
             </section>
           )}
+
+          <section className="visit-orders-card">
+            <h3>Οι Παραγγελίες Μου Σε Αυτό Το Τραπέζι</h3>
+
+            {isLoadingVisitOrders && <p>Φόρτωση ιστορικού...</p>}
+            {!isLoadingVisitOrders && visitOrders.length === 0 && (
+              <p>Δεν υπάρχει ακόμα ιστορικό για την τρέχουσα επίσκεψη.</p>
+            )}
+
+            {!isLoadingVisitOrders && visitOrders.length > 0 && (
+              <div className="visit-orders-list">
+                {visitOrders.map((order) => (
+                  <div key={order.id} className="visit-order-item">
+                    <div className="visit-order-top">
+                      <strong>Παραγγελία #{order.id}</strong>
+                      <span>{new Date(order.created_at).toLocaleTimeString()}</span>
+                    </div>
+
+                    <div className="visit-order-lines">
+                      {(order.order_items || []).map((item) => (
+                        <p key={item.id}>
+                          {item.qty}x {item.name}
+                        </p>
+                      ))}
+                    </div>
+
+                    <p className="visit-order-total">Σύνολο: {Number(order.total || 0).toFixed(2)} €</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </div>
 

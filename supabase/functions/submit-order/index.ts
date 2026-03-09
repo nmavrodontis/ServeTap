@@ -225,15 +225,30 @@ Deno.serve(async (req) => {
     return respond(429, rateLimit);
   }
 
-  const { data: orderRow, error: orderError } = await admin
+  const baseOrderInsert = {
+    table_id: validation.tableId,
+    total: validation.computedTotal,
+    status: "new",
+  };
+
+  let orderInsertResult = await admin
     .from("orders")
     .insert({
-      table_id: validation.tableId,
-      total: validation.computedTotal,
-      status: "new",
+      ...baseOrderInsert,
+      visit_token: String(payload?.tableToken || "").trim() || null,
     })
     .select("id")
     .single();
+
+  if (orderInsertResult.error?.code === "42703") {
+    orderInsertResult = await admin
+      .from("orders")
+      .insert(baseOrderInsert)
+      .select("id")
+      .single();
+  }
+
+  const { data: orderRow, error: orderError } = orderInsertResult;
 
   if (orderError || !orderRow?.id) {
     return respond(500, {

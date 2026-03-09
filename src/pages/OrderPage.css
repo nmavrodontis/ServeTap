@@ -171,6 +171,55 @@
   font-weight: 700;
 }
 
+.visit-orders-card {
+  margin-top: 14px;
+  border: 1px solid #dfdfdf;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fafafa;
+}
+
+.visit-orders-card h3 {
+  margin: 0 0 8px;
+}
+
+.visit-orders-card p {
+  margin: 0;
+  color: #444;
+}
+
+.visit-orders-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.visit-order-item {
+  border: 1px solid #e6e6e6;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.visit-order-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  color: #1a1a1a;
+}
+
+.visit-order-lines p {
+  margin: 0;
+  font-size: 0.93rem;
+  color: #505050;
+}
+
+.visit-order-total {
+  margin-top: 6px !important;
+  font-weight: 800;
+}
+
 .order-success p {
   margin: 10px 0 14px;
   font-weight: 700;
